@@ -1,0 +1,18 @@
+box: "chef/centos-6.6"
+server: "apache2.4"
+php: "mod_php"
+repos: "epel-release"
+packages:
+  - mysql
+  - mysql-server
+  - httpd
+  - php
+  - php-mysql
+  - php-mcrypt
+  - php-gd
+  - php-imap
+  - php-ldap
+  - php-odbc
+  - php-xml
+  - php-xmlrpc
+  - vim
