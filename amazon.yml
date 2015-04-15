@@ -1,4 +1,4 @@
-box: "chef/centos-6.6"
+box: "parallels/centos-7.0"
 os: "centos"
 server: "apache2.4"
 php: "mod_php"

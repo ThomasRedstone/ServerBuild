@@ -1,0 +1,25 @@
+httpd-config:
+  path: "/etc/httpd/conf.d/development.conf"
+  data: |
+    <VirtualHost _default_:80>
+        ServerAdmin webmaster@dummy-host.example.com
+        DocumentRoot /vagrant/www/public
+        ErrorLog /vagrant/logs/development-error_log
+        CustomLog /vagrant/logs/development-access_log common
+        <directory /vagrant/www/public>
+            Options All
+            Order deny,allow
+            Allow from all
+            AllowOverride all
+            Require all granted
+        </directory>
+    </VirtualHost>
+vagrantfile: |
+  Vagrant.configure("2") do |config|
+    config.vm.box = "###box###"
+    config.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data', mount_options: ['dmode=775,fmode=775']
+    $script = <<SCRIPT
+      ###script###
+  SCRIPT
+    config.vm.network "private_network", ip: "192.168.33.###IP###"
+  end

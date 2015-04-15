@@ -16,12 +16,18 @@ class ServerBuild {
     public function build($name, $config)
     {
         $yaml = new Parser();
-
+        $configDefaultsPath = $this->getConfigPath('defaults');
         $configPath = $this->getConfigPath($config);
-        $this->config = $yaml->parse(file_get_contents($configPath));
+        echo "ConfigPath: {$configPath}\n";
+        $this->config =
+            array_merge(
+                $yaml->parse(file_get_contents($configDefaultsPath)),
+                $yaml->parse(file_get_contents($configPath))
+            );
         if(is_dir($name)) {
             throw new \Exception("A directory with \"{$name}\" already exists");
         }
+        #die(getcwd()."\n");
         mkdir($name);
         chdir($name);
         $this->script .= "#Setup Repositories:\n". $this->setupPackages($this->config['repos']);
@@ -30,13 +36,13 @@ class ServerBuild {
         $this->script .= "#Setup Config:\n". $this->setupConfig($this->config['httpd-config']);
         $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $this->config['box']);
         file_put_contents("Vagrantfile", $vagrantfile);
-        $process = new Process('vagrant up');
-        $process->run();
-        if (!$process->isSuccessful()) {
-            throw new \RuntimeException($process->getErrorOutput());
-        }
+        #$process = new Process('vagrant up');
+        #$process->run();
+        #if (!$process->isSuccessful()) {
+        #    throw new \RuntimeException($process->getErrorOutput());
+        #}
 
-        echo $process->getOutput();
+        #echo $process->getOutput();
         #echo "Vagrantfile:\n{$vagrantfile}\n";
 
     }
@@ -50,6 +56,10 @@ class ServerBuild {
         if(is_file($config)) {
             return $config;
         }
+        if(is_file("app/config/{$config}")) {
+            return "app/config/{$config}";
+        }
+        echo "Can't seem to find path for {$config}\n";
         return realpath("./{$config}")."\n";
     }
 
