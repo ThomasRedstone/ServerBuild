@@ -17,7 +17,7 @@ httpd-config:
 vagrantfile: |
   Vagrant.configure("2") do |config|
     config.vm.box = "###box###"
-    config.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data', mount_options: ['dmode=775,fmode=775']
+    config.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data'
     $script = <<SCRIPT
       ###script###
   SCRIPT
