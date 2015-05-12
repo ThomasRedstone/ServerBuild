@@ -1,4 +1,7 @@
-box: "parallels/centos-7.0"
+box:
+  virtualbox: chef/centos-7.0
+  vmware: chef/centos-7.0
+  paralells: "parallels/centos-7.0"
 os: "centos"
 server: "apache2.4"
 php: "mod_php"
@@ -6,8 +9,9 @@ repos:
   - "epel-release"
   - "http://ftp.riken.jp/Linux/fedora/epel/6/i386/epel-release-6-8.noarch.rpm"
 packages:
-  - mysql
-  - mysql-server
+  - chkconfig
+  - mariadb
+  - mariadb-server
   - httpd
   - php
   - php-mysql
@@ -19,9 +23,13 @@ packages:
   - php-xml
   - php-xmlrpc
   - vim
+  - nfs-utils
 services:
+  - nfs-server
+  - nfs-lock
+  - nfs-idmap
   - httpd
-  - mysql
+  - mariadb
 directories:
   - logs
   - www/public

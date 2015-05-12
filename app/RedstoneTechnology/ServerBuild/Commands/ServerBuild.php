@@ -44,6 +44,12 @@ class ServerBuild extends Command
                 'Specify path for the config file, either as a name, or a path '.
                 '(if specifying a name, you need not include the file extension)/'
             )
+            ->addOption(
+                'architecture',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Specify the architecture you\'re using, Virtualbox, or Paralelles./'
+            )
         ;
     }
 
@@ -57,6 +63,10 @@ class ServerBuild extends Command
         if (!$config) {
             $config = 'legacy';
         }
-        $this->serverBuild->build($name, $config);
+        $architecture = $input->getOption('architecture');
+        if(!$architecture) {
+            $architecture = 'virtualbox';
+        }
+        $this->serverBuild->build($name, $config, $architecture);
     }
 }

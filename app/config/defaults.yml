@@ -1,7 +1,7 @@
 httpd-config:
   path: "/etc/httpd/conf.d/development.conf"
   data: |
-    <VirtualHost _default_:80>
+    <VirtualHost *:80>
         ServerAdmin webmaster@dummy-host.example.com
         DocumentRoot /vagrant/www/public
         ErrorLog /vagrant/logs/development-error_log
@@ -17,9 +17,18 @@ httpd-config:
 vagrantfile: |
   Vagrant.configure("2") do |config|
     config.vm.box = "###box###"
-    config.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data'
+    config.vm.synced_folder "./", "/vagrant"
+    config.vm.provider "vbox" do |v, override|
+      v.update_guest_tools = true
+      override.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data'
+    end
+    config.vm.provider "parallels" do |v, override|
+      v.update_guest_tools = true
+      override.vm.synced_folder "./", "/vagrant"
+    end
     $script = <<SCRIPT
       ###script###
   SCRIPT
+    config.vm.provision "shell", inline: $script
     config.vm.network "private_network", ip: "192.168.33.###IP###"
   end

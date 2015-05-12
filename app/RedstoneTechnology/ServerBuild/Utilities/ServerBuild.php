@@ -13,7 +13,7 @@ class ServerBuild {
     {
     }
 
-    public function build($name, $config)
+    public function build($name, $config, $architecture)
     {
         $yaml = new Parser();
         $configDefaultsPath = $this->getConfigPath('defaults');
@@ -27,14 +27,16 @@ class ServerBuild {
         if(is_dir($name)) {
             throw new \Exception("A directory with \"{$name}\" already exists");
         }
+        $box = $this->getBox($this->config['box'], $architecture);
         #die(getcwd()."\n");
         mkdir($name);
         chdir($name);
         $this->script .= "#Setup Repositories:\n". $this->setupPackages($this->config['repos']);
         $this->script .= "#Setup Packages:\n". $this->setupPackages($this->config['packages']);
+        $this->script .= "#Enable Services\n". $this->setupServices($this->config['services']);
         $this->script .= "#Setup Directories:\n". $this->setupDirectories($this->config['directories']);
         $this->script .= "#Setup Config:\n". $this->setupConfig($this->config['httpd-config']);
-        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $this->config['box']);
+        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box);
         file_put_contents("Vagrantfile", $vagrantfile);
         #$process = new Process('vagrant up');
         #$process->run();
@@ -47,6 +49,14 @@ class ServerBuild {
 
     }
 
+    protected function getBox($box, $architecture)
+    {
+        if (!empty($box[$architecture])) {
+            return $box[$architecture];
+        }
+        throw new \Exception("Cannot get a box for the architecture \"{$architecture}\"");
+    }
+
     protected function getConfigPath($config)
     {
         $fileInfo = pathinfo($config);
@@ -56,8 +66,14 @@ class ServerBuild {
         if(is_file($config)) {
             return $config;
         }
+        if(is_file(APP_PATH."/{$config}")) {
+            return APP_PATH."/{$config}";
+        }
         if(is_file("app/config/{$config}")) {
             return "app/config/{$config}";
+        }
+        if(is_file(APP_PATH."/app/config/{$config}")) {
+            return APP_PATH."/app/config/{$config}";
         }
         echo "Can't seem to find path for {$config}\n";
         return realpath("./{$config}")."\n";
@@ -88,9 +104,40 @@ class ServerBuild {
                 "wget --quiet --output-document=- {$package} | dpkg --install -")."\n";
         }
         return ($os === "centos" ?
-            "yum install " :
-            "apt-get install ").
+            "yum install -y " :
+            "apt-get install -y ").
             "{$package}\n";
+    }
+
+    protected function setupServices($services)
+    {
+        $enableServices = '';
+        $os = $this->config['os'];
+        foreach ($services as $service) {
+            $enableServices .= (
+                $os === 'centos' ?
+                "chkconfig {$service} on" :
+                "chkconfig {$service} on"
+            )."\n";
+            $enableServices .= (
+                $os === 'centos' ?
+                    "service {$service} start" :
+                    "service {$service} start"
+            )."\n";
+
+        }
+        return $enableServices;
+    }
+
+    protected function processApplicationConfiguration()
+    {
+        $appConfig = $this->getConfigPath('app');
+        if(!is_file($appConfig)) {
+            throw new \Exception("The application config file at \"{$appConfig}\" does not exist");
+        }
+        $yaml = new Parser();
+        $yaml->parse(file_get_contents($appConfig));
+
     }
 
     protected function setupDirectories($directories)

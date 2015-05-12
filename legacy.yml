@@ -1,4 +1,6 @@
-box: "chef/centos-6.6"
+box:
+  virtualbox: "chef/centos-6.6"
+  paralells: parallels/centos-6.6
 os: "centos"
 server: "apache2.4"
 php: "mod_php"
@@ -22,6 +24,7 @@ packages:
 services:
   - httpd
   - mysql
+  - nfs
 directories:
   - logs
   - www/public
