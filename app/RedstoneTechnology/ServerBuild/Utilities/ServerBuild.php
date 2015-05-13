@@ -121,8 +121,8 @@ class ServerBuild {
             )."\n";
             $enableServices .= (
                 $os === 'centos' ?
-                    "service {$service} start" :
-                    "service {$service} start"
+                    "service {$service} restart" :
+                    "service {$service} restart"
             )."\n";
 
         }

@@ -7,8 +7,8 @@ server: "apache2.4"
 php: "mod_php"
 repos:
   - "epel-release"
-  - "http://ftp.riken.jp/Linux/fedora/epel/6/i386/epel-release-6-8.noarch.rpm"
 packages:
+  - git
   - chkconfig
   - mariadb
   - mariadb-server
