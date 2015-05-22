@@ -3,6 +3,7 @@ box:
   vmware: chef/centos-7.0
   paralells: "parallels/centos-7.0"
 os: "centos"
+webUser: "apache"
 server: "apache2.4"
 php: "mod_php"
 repos:

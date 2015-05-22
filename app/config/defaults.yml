@@ -16,6 +16,7 @@ httpd-config:
     </VirtualHost>
 vagrantfile: |
   Vagrant.configure("2") do |config|
+    v.name = "###name###"
     config.vm.box = "###box###"
     config.vm.synced_folder "./", "/vagrant"
     config.vm.provider "vbox" do |v, override|

@@ -49,7 +49,7 @@ class ServerBuild {
         $this->script .= "#Setup Config:\n". $this->setupConfig($this->config['httpd-config']);
         $this->script .= "Setup App\n". $this->processApplicationConfiguration($appConfig);
         #die($this->script);
-        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box);
+        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
         file_put_contents("Vagrantfile", $vagrantfile);
         #$process = new Process('vagrant up');
         #$process->run();
@@ -147,6 +147,7 @@ class ServerBuild {
         $script = '';
         $script .= "#Setup App specific Directories\n".$this->setupDirectories($appConfig['directories'], true);
         $script .= "#Run App specific Commands\n".$this->setupCommands($appConfig['commands']);
+        $script .= "#Run Composer Install\n".$this->setupComposer();
         #$script .= "#Setup Repository\n".$this->setupRepository($appConfig['repository']);
         return $script;
     }
@@ -160,10 +161,10 @@ class ServerBuild {
             }
             return $makeDirectories;
         }
-        if($global === true) {
-            return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi\n";
+        if($global === false) {
+            $directories = "/vagrant/{$directories}";
         }
-        return "if [ ! -d /vagrant/{$directories} ]; then\nmkdir -p /vagrant/{$directories}\nfi\n";
+        return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;\nchown {$this->config->webUser}:vagrant {$directories};\nchmod 775 {$directories}\n";
     }
 
     protected function setupConfig($config)
@@ -171,7 +172,7 @@ class ServerBuild {
         if (!is_array($config) || empty($config['path']) || empty($config['data'])) {
             return false;
         }
-        return "echo \"{$config['data']}\" > {$config['path']}";
+        return "echo \"{$config['data']}\" > {$config['path']}\n";
     }
 
     protected function setupRepository($repository, $gitUsername, $input, $output)
@@ -208,9 +209,10 @@ class ServerBuild {
         return $script;
     }
 
-    protected function setupServer($script, $vagrantfile, $box)
+    protected function setupServer($script, $vagrantfile, $box, $name)
     {
         $vagrantfile = str_replace('###script###', $script, $vagrantfile);
+        $vagrantfile = str_replace('###name###', $name, $vagrantfile);
         $vagrantfile = str_replace('###box###', $box, $vagrantfile);
         $vagrantfile = str_replace('###IP###', rand(1, 254), $vagrantfile);
         return $vagrantfile;
