@@ -45,10 +45,16 @@ class ServerBuild extends Command
                 '(if specifying a name, you need not include the file extension)/'
             )
             ->addOption(
+                'gitUsername',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Specify a Git Username, which will be used with the repository provided to clone it'
+            )
+            ->addOption(
                 'architecture',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Specify the architecture you\'re using, Virtualbox, or Paralelles./'
+                'Specify the architecture you\'re using, Virtualbox, VMWare or Paralelles./'
             )
         ;
     }
@@ -67,6 +73,10 @@ class ServerBuild extends Command
         if(!$architecture) {
             $architecture = 'virtualbox';
         }
-        $this->serverBuild->build($name, $config, $architecture);
+        $gitUsername = $input->getOption('gitUsername');
+        if(!$gitUsername) {
+            $gitUsername = false;
+        }
+        $this->serverBuild->build($name, $config, $architecture, $gitUsername, $input, $output);
     }
 }
