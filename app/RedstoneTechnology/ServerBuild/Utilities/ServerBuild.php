@@ -7,7 +7,8 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Helper\QuestionHelper;
 
-class ServerBuild {
+class ServerBuild
+{
     protected $script = '';
     protected $config = [];
 
@@ -27,27 +28,27 @@ class ServerBuild {
                 $yaml->parse(file_get_contents($configPath))
             );
         $appConfigPath = $this->getConfigPath('app');
-        if(!is_file($appConfigPath)) {
+        if (!is_file($appConfigPath)) {
             throw new \Exception("The application config file at \"{$appConfigPath}\" does not exist");
         }
         $yaml = new Parser();
         $appConfig = $yaml->parse(file_get_contents($appConfigPath));
-        if(!empty($appConfig['repository']))
-        if(is_dir($name)) {
-            throw new \Exception("A directory with \"{$name}\" already exists");
-        }
+        if (!empty($appConfig['repository']))
+            if (is_dir($name)) {
+                throw new \Exception("A directory with \"{$name}\" already exists");
+            }
         $box = $this->getBox($this->config['box'], $architecture);
         #die(getcwd()."\n");
         mkdir($name);
         chdir($name);
         echo "#Setting up Repository\n";
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
-        $this->script .= "#Setup Repositories:\n". $this->setupPackages($this->config['repos']);
-        $this->script .= "#Setup Packages:\n". $this->setupPackages($this->config['packages']);
-        $this->script .= "#Enable Services\n". $this->setupServices($this->config['services']);
-        $this->script .= "#Setup Directories:\n". $this->setupDirectories($this->config['directories']);
-        $this->script .= "#Setup Config:\n". $this->setupConfig($this->config['httpd-config']);
-        $this->script .= "Setup App\n". $this->processApplicationConfiguration($appConfig);
+        $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
+        $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages']);
+        $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services']);
+        $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
+        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config']);
+        $this->script .= "Setup App\n" . $this->processApplicationConfiguration($appConfig);
         #die($this->script);
         $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
         file_put_contents("Vagrantfile", $vagrantfile);
@@ -76,28 +77,28 @@ class ServerBuild {
         if (empty($fileInfo['extension'])) {
             $config .= '.yml';
         }
-        if(is_file($config)) {
+        if (is_file($config)) {
             return $config;
         }
-        if(is_file(APP_PATH."/{$config}")) {
-            return APP_PATH."/{$config}";
+        if (is_file(APP_PATH . "/{$config}")) {
+            return APP_PATH . "/{$config}";
         }
-        if(is_file("app/config/{$config}")) {
+        if (is_file("app/config/{$config}")) {
             return "app/config/{$config}";
         }
-        if(is_file(APP_PATH."/app/config/{$config}")) {
-            return APP_PATH."/app/config/{$config}";
+        if (is_file(APP_PATH . "/app/config/{$config}")) {
+            return APP_PATH . "/app/config/{$config}";
         }
         echo "Can't seem to find path for {$config}\n";
-        return realpath("./{$config}")."\n";
+        return realpath("./{$config}") . "\n";
     }
 
     protected function setupPackages($repos)
     {
-        if(empty($repos)) {
+        if (empty($repos)) {
             return false;
         }
-        if(is_array($repos)) {
+        if (is_array($repos)) {
             $script = '';
             foreach ($repos as $repo) {
                 $script .= $this->setupPackages($repo);
@@ -114,12 +115,12 @@ class ServerBuild {
         if (!filter_var($package, FILTER_VALIDATE_URL) === false) {
             return ($os === "centos" ?
                 "rpm -ivh {$package}" :
-                "wget --quiet --output-document=- {$package} | dpkg --install -")."\n";
+                "wget --quiet --output-document=- {$package} | dpkg --install -") . "\n";
         }
         return ($os === "centos" ?
             "yum install -y " :
-            "apt-get install -y ").
-            "{$package}\n";
+            "apt-get install -y ") .
+        "{$package}\n";
     }
 
     protected function setupServices($services)
@@ -129,14 +130,14 @@ class ServerBuild {
         foreach ($services as $service) {
             $enableServices .= (
                 $os === 'centos' ?
-                "chkconfig {$service} on" :
-                "chkconfig {$service} on"
-            )."\n";
+                    "chkconfig {$service} on" :
+                    "chkconfig {$service} on"
+                ) . "\n";
             $enableServices .= (
                 $os === 'centos' ?
                     "service {$service} restart" :
                     "service {$service} restart"
-            )."\n";
+                ) . "\n";
 
         }
         return $enableServices;
@@ -145,9 +146,10 @@ class ServerBuild {
     protected function processApplicationConfiguration($appConfig)
     {
         $script = '';
-        $script .= "#Setup App specific Directories\n".$this->setupDirectories($appConfig['directories'], true);
-        $script .= "#Run App specific Commands\n".$this->setupCommands($appConfig['commands']);
-        $script .= "#Run Composer Install\n".$this->setupComposer();
+        $script .= "#Setup App specific Directories\n" . $this->setupDirectories($appConfig['directories'], true);
+        $script .= "#Run App specific Commands\n" . $this->setupCommands($appConfig['commands']);
+        $script .= "#Run Composer Install\n" . $this->setupComposer();
+        $script .= "#Run Database Setup\n" . $this->setupDatabase($appConfig['database']);
         #$script .= "#Setup Repository\n".$this->setupRepository($appConfig['repository']);
         return $script;
     }
@@ -161,10 +163,13 @@ class ServerBuild {
             }
             return $makeDirectories;
         }
-        if($global === false) {
+        if ($global === false) {
             $directories = "/vagrant/{$directories}";
         }
-        return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;\nchown {$this->config->webUser}:vagrant {$directories};\nchmod 775 {$directories}\n";
+        if (empty($this->config['webUser'])) {
+            die("No web user set\n" . var_export($this->config, 1));
+        }
+        return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;\nchown {$this->config['webUser']}:vagrant {$directories};\nchmod 775 {$directories}\n";
     }
 
     protected function setupConfig($config)
@@ -177,7 +182,7 @@ class ServerBuild {
 
     protected function setupRepository($repository, $gitUsername, $input, $output)
     {
-        if(!empty($gitUsername)) {
+        if (!empty($gitUsername)) {
             $helper = new QuestionHelper();
             $question = new Question("What is your Git password?");
             $question->setHidden(true);
@@ -200,10 +205,11 @@ class ServerBuild {
     {
         return "if [ -f /vagrant/www/composer.json ]; then \ncd /vagrant/www;\ncomposer install;\nfi\n";
     }
+
     protected function setupCommands($commands)
     {
         $script = '';
-        foreach($commands as $command) {
+        foreach ($commands as $command) {
             $script .= "{$command}\n";
         }
         return $script;
@@ -217,4 +223,15 @@ class ServerBuild {
         $vagrantfile = str_replace('###IP###', rand(1, 254), $vagrantfile);
         return $vagrantfile;
     }
+
+    protected function setupDatabase($config)
+    {
+        $command = "mysql -u root -e 'create database {$config['user_database']};';\n" .
+            "mysql -u root -e 'grant ALL on {$config['user_database']}.* to " .
+            "'{$config['user_user']}@'localhost' identified by '{$config['user_password']}\n";
+        foreach($config['commands'] as $command) {
+            $command .= "mysql -u {$config['user_user']} -p{$config['user_password']} {$config['user_database']} < /vagrant/{$command}\n";
+        }
+    }
 }
+

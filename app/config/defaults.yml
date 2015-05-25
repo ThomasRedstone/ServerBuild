@@ -33,3 +33,6 @@ vagrantfile: |
     config.vm.provision "shell", inline: $script
     config.vm.network "private_network", ip: "192.168.33.###IP###"
   end
+php-config:
+  path: "/etc/php.d/custom.ini"
+  data: |
