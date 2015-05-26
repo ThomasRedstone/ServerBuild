@@ -48,6 +48,7 @@ class ServerBuild
         $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services']);
         $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
         $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config']);
+        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['php-config']);
         $this->script .= "Setup App\n" . $this->processApplicationConfiguration($appConfig);
         $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
         #die($this->script);
