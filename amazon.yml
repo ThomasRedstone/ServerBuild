@@ -19,6 +19,7 @@ packages:
   - php-mysql
   - php-mcrypt
   - php-gd
+  - php-dom
   - php-imap
   - php-ldap
   - php-odbc

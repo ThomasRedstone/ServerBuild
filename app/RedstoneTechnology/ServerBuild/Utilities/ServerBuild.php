@@ -44,11 +44,12 @@ class ServerBuild
         echo "#Setting up Repository\n";
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
         $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
-        $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages']);
+        $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages'], true);
         $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services']);
         $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
         $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config']);
         $this->script .= "Setup App\n" . $this->processApplicationConfiguration($appConfig);
+        $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
         #die($this->script);
         $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
         file_put_contents("Vagrantfile", $vagrantfile);
@@ -93,23 +94,30 @@ class ServerBuild
         return realpath("./{$config}") . "\n";
     }
 
-    protected function setupPackages($repos)
+    protected function setupPackages($packages, $compact = false)
     {
-        if (empty($repos)) {
+        if (empty($packages)) {
             return false;
         }
-        if (is_array($repos)) {
+        if (is_array($packages)) {
             $script = '';
-            foreach ($repos as $repo) {
-                $script .= $this->setupPackages($repo);
+            foreach ($packages as $package) {
+                if($compact === true && $script != '') {
+                    $script .= " {$package}";
+                    continue;
+                }
+                $script .= $this->setupPackages($package, $compact);
+            }
+            if ($compact === true) {
+                $script .= "\n";
             }
         } else {
-            $script = $this->installPackage($repos);
+            $script = $this->installPackage($packages, $compact);
         }
         return $script;
     }
 
-    protected function installPackage($package)
+    protected function installPackage($package, $compact = false)
     {
         $os = $this->config['os'];
         if (!filter_var($package, FILTER_VALIDATE_URL) === false) {
@@ -117,28 +125,36 @@ class ServerBuild
                 "rpm -ivh {$package}" :
                 "wget --quiet --output-document=- {$package} | dpkg --install -") . "\n";
         }
-        return ($os === "centos" ?
+        $script = ($os === "centos" ?
             "yum install -y " :
             "apt-get install -y ") .
-        "{$package}\n";
+        "{$package}";
+        if ($compact === false) {
+            $script .= "\n";
+        }
+        return $script;
     }
 
-    protected function setupServices($services)
+    protected function setupServices($services, $action = 'enable')
     {
         $enableServices = '';
         $os = $this->config['os'];
         foreach ($services as $service) {
-            $enableServices .= (
-                $os === 'centos' ?
-                    "chkconfig {$service} on" :
-                    "chkconfig {$service} on"
-                ) . "\n";
-            $enableServices .= (
-                $os === 'centos' ?
-                    "service {$service} restart" :
-                    "service {$service} restart"
-                ) . "\n";
-
+            switch ($action) {
+                case 'enable':
+                    $enableServices .= (
+                        $os === 'centos' ?
+                            "chkconfig {$service} on" :
+                            "chkconfig {$service} on"
+                        ) . "\n";
+                case 'restart':
+                    $enableServices .= (
+                        $os === 'centos' ?
+                            "service {$service} restart" :
+                            "service {$service} restart"
+                        ) . "\n";
+                    break;
+            }
         }
         return $enableServices;
     }
@@ -203,7 +219,12 @@ class ServerBuild
 
     protected function setupComposer()
     {
-        return "if [ -f /vagrant/www/composer.json ]; then \ncd /vagrant/www;\n/usr/local/composer install;\nfi\n";
+        return "if [ -f /vagrant/www/composer.json ]; then \n".
+        "curl -sS https://getcomposer.org/installer | php\n".
+        "mv composer.phar /usr/local/bin/composer\n".
+        "cd /vagrant/www;\n".
+        "/usr/local/bin/composer install;\n".
+        "fi\n";
     }
 
     protected function setupCommands($commands)
