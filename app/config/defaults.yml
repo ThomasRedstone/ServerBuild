@@ -16,14 +16,15 @@ httpd-config:
     </VirtualHost>
 vagrantfile: |
   Vagrant.configure("2") do |config|
-    v.name = "###name###"
     config.vm.box = "###box###"
     config.vm.synced_folder "./", "/vagrant"
     config.vm.provider "vbox" do |v, override|
+      v.name = "###name###"
       v.update_guest_tools = true
       override.vm.synced_folder "./", "/vagrant", owner: 'vagrant', group: 'www-data'
     end
     config.vm.provider "parallels" do |v, override|
+      v.name = "###name###"
       v.update_guest_tools = true
       override.vm.synced_folder "./", "/vagrant"
     end
@@ -36,3 +37,4 @@ vagrantfile: |
 php-config:
   path: "/etc/php.d/custom.ini"
   data: |
+    date.timezone = "Europe/London";

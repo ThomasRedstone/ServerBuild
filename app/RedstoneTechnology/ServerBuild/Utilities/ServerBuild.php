@@ -203,7 +203,7 @@ class ServerBuild
 
     protected function setupComposer()
     {
-        return "if [ -f /vagrant/www/composer.json ]; then \ncd /vagrant/www;\ncomposer install;\nfi\n";
+        return "if [ -f /vagrant/www/composer.json ]; then \ncd /vagrant/www;\n/usr/local/composer install;\nfi\n";
     }
 
     protected function setupCommands($commands)
@@ -228,10 +228,11 @@ class ServerBuild
     {
         $command = "mysql -u root -e 'create database {$config['user_database']};';\n" .
             "mysql -u root -e 'grant ALL on {$config['user_database']}.* to " .
-            "'{$config['user_user']}@'localhost' identified by '{$config['user_password']}\n";
-        foreach($config['commands'] as $command) {
-            $command .= "mysql -u {$config['user_user']} -p{$config['user_password']} {$config['user_database']} < /vagrant/{$command}\n";
+            "`{$config['user_user']}`@`localhost` identified by \"{$config['user_password']}\"'\n";
+        foreach($config['scripts'] as $script) {
+            $command .= "mysql -u root {$config['user_database']} < /vagrant/{$script}\n";
         }
+        return $command;
     }
 }
 

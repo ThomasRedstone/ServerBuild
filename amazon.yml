@@ -26,12 +26,14 @@ packages:
   - php-xmlrpc
   - vim
   - nfs-utils
+  - redis
 services:
   - nfs-server
   - nfs-lock
   - nfs-idmap
   - httpd
   - mariadb
+  - redis
 directories:
   - logs
   - www/public
