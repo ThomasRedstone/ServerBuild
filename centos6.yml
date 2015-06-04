@@ -4,6 +4,11 @@ box:
 os: "centos"
 server: "apache2.4"
 php: "mod_php"
+paths:
+  httpd: "/etc/httpd/conf.d/development.conf"
+  php: "/etc/php.d/custom.ini"
+db: "mysql"
+webUser: "apache"
 repos:
   - "epel-release"
   - "http://ftp.riken.jp/Linux/fedora/epel/6/i386/epel-release-6-8.noarch.rpm"
@@ -15,17 +20,21 @@ packages:
   - php
   - php-mysql
   - php-mcrypt
+  - php-curl
+  - php-xsl
   - php-gd
   - php-imap
   - php-ldap
   - php-odbc
   - php-xml
   - php-xmlrpc
+  - redis-server
   - vim
 services:
   - httpd
   - mysql
   - nfs
+  - redis-server
 directories:
   - logs
   - www/public

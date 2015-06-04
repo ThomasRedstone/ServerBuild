@@ -5,27 +5,42 @@ box:
 os: "ubuntu"
 server: "apache2.4"
 php: "mod_php"
+paths:
+  httpd: "/etc/apache2/sites-enabled/development.conf"
+  php: "/etc/php5/mods-available/custom.ini"
+db: "mysql"
+webUser: "www-data"
 repos:
-  - "epel-release"
 packages:
   - git
-  - mysql
-  - mysql-server
-  - apache2.4
-  - php
-  - php-mysql
-  - php-mcrypt
-  - php-gd
-  - php-imap
-  - php-ldap
-  - php-odbc
-  - php-xml
-  - php-xmlrpc
+  - curl
+  - mariadb-client
+  - mariadb-server
+  - mariadb-server-5.5
+  - apache2
+  - php5
+  - php5-mysql
+  - php5-mcrypt
+  - php5-gd
+  - php5-imap
+  - php5-ldap
+  - php5-odbc
+  - php5-xmlrpc
+  - php5-curl
+  - php5-xsl
+  - redis-server
   - vim
+  - nfs-kernel-server
+  - nfs-common
 services:
-  - httpd
+  - apache2
   - mysql
-  - nfs
+  - redis-server
+prebuildCommands:
+  - export DEBIAN_FRONTEND=noninteractive
+  - debconf-set-selections <<< 'mariadb-server-5.5 mysql-server/root_password password'
+  - debconf-set-selections <<< 'mariadb-server-5.5 mysql-server/root_password_again password'
+commands:
 directories:
   - logs
   - www/public

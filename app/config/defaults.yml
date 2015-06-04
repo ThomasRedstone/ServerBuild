@@ -1,19 +1,17 @@
-httpd-config:
-  path: "/etc/httpd/conf.d/development.conf"
-  data: |
-    <VirtualHost *:80>
-        ServerAdmin webmaster@dummy-host.example.com
-        DocumentRoot /vagrant/www/public
-        ErrorLog /vagrant/logs/development-error_log
-        CustomLog /vagrant/logs/development-access_log common
-        <directory /vagrant/www/public>
-            Options All
-            Order deny,allow
-            Allow from all
-            AllowOverride all
-            Require all granted
-        </directory>
-    </VirtualHost>
+httpd-config: |
+  <VirtualHost *:80>
+      ServerAdmin webmaster@dummy-host.example.com
+      DocumentRoot /vagrant/www/public
+      ErrorLog /vagrant/logs/development-error_log
+      CustomLog /vagrant/logs/development-access_log common
+      <directory /vagrant/www/public>
+          Options All
+          Order deny,allow
+          Allow from all
+          AllowOverride all
+          Require all granted
+      </directory>
+  </VirtualHost>
 vagrantfile: |
   Vagrant.configure("2") do |config|
     config.vm.box = "###box###"
@@ -29,12 +27,10 @@ vagrantfile: |
       override.vm.synced_folder "./", "/vagrant"
     end
     $script = <<SCRIPT
-      ###script###
+  ###script###
   SCRIPT
     config.vm.provision "shell", inline: $script
     config.vm.network "private_network", ip: "192.168.33.###IP###"
   end
-php-config:
-  path: "/etc/php.d/custom.ini"
-  data: |
+php-config: |
     date.timezone = "Europe/London";

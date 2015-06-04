@@ -17,6 +17,7 @@ class ServerBuild
     }
 
     public function build($name, $config, $architecture, $gitUsername, $input, $output)
+
     {
         $yaml = new Parser();
         $configDefaultsPath = $this->getConfigPath('defaults');
@@ -42,16 +43,18 @@ class ServerBuild
         mkdir($name);
         chdir($name);
         echo "#Setting up Repository\n";
+        $this->script .= "#Run Prebuild Commands\n" . $this->setupCommands($this->config['prebuildCommands']);
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
         $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
         $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages'], true);
         $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services']);
         $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
-        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config']);
-        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['php-config']);
-        $this->script .= "Setup App\n" . $this->processApplicationConfiguration($appConfig);
+        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config'], $this->config['paths']['httpd']);
+        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['php-config'], $this->config['paths']['php']);
+        $this->script .= "#Setup App\n" . $this->processApplicationConfiguration($appConfig);
         $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
         #die($this->script);
+        $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['commands']);
         $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
         file_put_contents("Vagrantfile", $vagrantfile);
         #$process = new Process('vagrant up');
@@ -128,7 +131,7 @@ class ServerBuild
         }
         $script = ($os === "centos" ?
             "yum install -y " :
-            "apt-get install -y ") .
+            "apt-get install -q -y ") .
         "{$package}";
         if ($compact === false) {
             $script .= "\n";
@@ -138,6 +141,9 @@ class ServerBuild
 
     protected function setupServices($services, $action = 'enable')
     {
+        /**
+         * @todo: use switch if we add another OS (CentOS and Ubuntu at the moment).
+         */
         $enableServices = '';
         $os = $this->config['os'];
         foreach ($services as $service) {
@@ -146,7 +152,7 @@ class ServerBuild
                     $enableServices .= (
                         $os === 'centos' ?
                             "chkconfig {$service} on" :
-                            "chkconfig {$service} on"
+                            "update-rc.d {$service} defaults"
                         ) . "\n";
                 case 'restart':
                     $enableServices .= (
@@ -189,32 +195,32 @@ class ServerBuild
         return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;\nchown {$this->config['webUser']}:vagrant {$directories};\nchmod 775 {$directories}\n";
     }
 
-    protected function setupConfig($config)
+    protected function setupConfig($config, $path)
     {
-        if (!is_array($config) || empty($config['path']) || empty($config['data'])) {
+        if (empty($path) || empty($config)) {
             return false;
         }
-        return "echo \"{$config['data']}\" > {$config['path']}\n";
+        return "echo \"{$config}\" > {$path}\n";
     }
 
     protected function setupRepository($repository, $gitUsername, $input, $output)
     {
-        if (!empty($gitUsername)) {
+        if ($gitUsername !== false) {
             $helper = new QuestionHelper();
             $question = new Question("What is your Git password?");
             $question->setHidden(true);
             $gitPassword = $helper->ask($input, $output, $question);
             echo "$repository\n";
             $repository = str_replace('https://', "http://{$gitUsername}:{$gitPassword}@", $repository);
-        }
-        $process = new Process("git clone {$repository} www");
+            $process = new Process("git clone {$repository} www");
 
-        try {
-            $process->mustRun();
+            try {
+                $process->mustRun();
 
-            echo $process->getOutput();
-        } catch (ProcessFailedException $e) {
-            echo $e->getMessage();
+                echo $process->getOutput();
+            } catch (ProcessFailedException $e) {
+                echo $e->getMessage();
+            }
         }
     }
 
@@ -231,8 +237,10 @@ class ServerBuild
     protected function setupCommands($commands)
     {
         $script = '';
-        foreach ($commands as $command) {
-            $script .= "{$command}\n";
+        if(is_array($commands)) {
+            foreach ($commands as $command) {
+                $script .= "{$command}\n";
+            }
         }
         return $script;
     }
@@ -248,11 +256,12 @@ class ServerBuild
 
     protected function setupDatabase($config)
     {
-        $command = "mysql -u root -e 'create database {$config['user_database']};';\n" .
-            "mysql -u root -e 'grant ALL on {$config['user_database']}.* to " .
+        $sqlCommand = $this->config['db'];
+        $command = "{$sqlCommand} -u root -e 'create database {$config['user_database']};';\n" .
+            "{$sqlCommand} -u root -e 'grant ALL on {$config['user_database']}.* to " .
             "`{$config['user_user']}`@`localhost` identified by \"{$config['user_password']}\"'\n";
         foreach($config['scripts'] as $script) {
-            $command .= "mysql -u root {$config['user_database']} < /vagrant/{$script}\n";
+            $command .= "{$sqlCommand} -u root {$config['user_database']} < /vagrant/{$script}\n";
         }
         return $command;
     }
