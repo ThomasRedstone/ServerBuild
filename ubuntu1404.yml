@@ -1,0 +1,31 @@
+box:
+  virtualbox: "hashicorp/precise64"
+  vmware: "hashicorp/precise64"
+  paralells: "parallels/ubuntu-14.04"
+os: "ubuntu"
+server: "apache2.4"
+php: "mod_php"
+repos:
+  - "epel-release"
+packages:
+  - git
+  - mysql
+  - mysql-server
+  - apache2.4
+  - php
+  - php-mysql
+  - php-mcrypt
+  - php-gd
+  - php-imap
+  - php-ldap
+  - php-odbc
+  - php-xml
+  - php-xmlrpc
+  - vim
+services:
+  - httpd
+  - mysql
+  - nfs
+directories:
+  - logs
+  - www/public
