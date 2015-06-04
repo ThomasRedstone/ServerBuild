@@ -4,3 +4,9 @@ commands:
   - curl -sS https://getcomposer.org/installer | php
   - mv composer.phar /usr/local/bin/composer
 repository: https://bitbucket.org/app/repo.git
+database:
+  user_database: example
+  user_user: testuser
+  user_password: password123
+  scripts:
+    - exampleScript.sql

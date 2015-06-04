@@ -43,7 +43,9 @@ class ServerBuild
         mkdir($name);
         chdir($name);
         echo "#Setting up Repository\n";
-        $this->script .= "#Run Prebuild Commands\n" . $this->setupCommands($this->config['prebuildCommands']);
+	    if(!empty($this->config['prebuildCommands'])) {
+            $this->script .= "#Run Prebuild Commands\n" . $this->setupCommands($this->config['prebuildCommands']);
+        }
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
         $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
         $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages'], true);
@@ -172,8 +174,9 @@ class ServerBuild
         $script .= "#Setup App specific Directories\n" . $this->setupDirectories($appConfig['directories'], true);
         $script .= "#Run App specific Commands\n" . $this->setupCommands($appConfig['commands']);
         $script .= "#Run Composer Install\n" . $this->setupComposer();
-        $script .= "#Run Database Setup\n" . $this->setupDatabase($appConfig['database']);
-        #$script .= "#Setup Repository\n".$this->setupRepository($appConfig['repository']);
+        if(!empty($appConfig['database'])) {
+            $script .= "#Run Database Setup\n" . $this->setupDatabase($appConfig['database']);
+        }
         return $script;
     }
 
