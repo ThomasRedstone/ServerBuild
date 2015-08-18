@@ -56,8 +56,10 @@ class ServerBuild
         $this->script .= "#Setup App\n" . $this->processApplicationConfiguration($appConfig);
         $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
         #die($this->script);
-        $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['commands']);
-        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
+        if(!empty($this->config['commands'])) {
+            $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['commands']);
+        }
+        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name, 'vagrant'); #$this->config['webUser']);
         file_put_contents("Vagrantfile", $vagrantfile);
         #$process = new Process('vagrant up');
         #$process->run();
@@ -102,9 +104,13 @@ class ServerBuild
 
     protected function setupPackages($packages, $compact = false)
     {
+        $update = ($this->config['os'] === "centos" ?
+                "yum update -y\nyum install -q -y applydeltarpm\n" :
+                "apt-get update -q -y\napt-get upgrade\n");
         if (empty($packages)) {
             return false;
         }
+
         if (is_array($packages)) {
             $script = '';
             foreach ($packages as $package) {
@@ -120,7 +126,7 @@ class ServerBuild
         } else {
             $script = $this->installPackage($packages, $compact);
         }
-        return $script;
+        return "$update\n$script";
     }
 
     protected function installPackage($package, $compact = false)
@@ -248,11 +254,12 @@ class ServerBuild
         return $script;
     }
 
-    protected function setupServer($script, $vagrantfile, $box, $name)
+    protected function setupServer($script, $vagrantfile, $box, $name, $group)
     {
         $vagrantfile = str_replace('###script###', $script, $vagrantfile);
         $vagrantfile = str_replace('###name###', $name, $vagrantfile);
         $vagrantfile = str_replace('###box###', $box, $vagrantfile);
+        $vagrantfile = str_replace('###group###', $group, $vagrantfile);
         $vagrantfile = str_replace('###IP###', rand(1, 254), $vagrantfile);
         return $vagrantfile;
     }

@@ -4,10 +4,12 @@ box:
 os: "centos"
 server: "apache2.4"
 php: "mod_php"
+httpdRequire: "# Only for HTTPD 2.4"
 paths:
   httpd: "/etc/httpd/conf.d/development.conf"
   php: "/etc/php.d/custom.ini"
 db: "mysql"
+dbCommand: "mysql"
 webUser: "apache"
 repos:
   - "epel-release"

@@ -6,13 +6,18 @@ os: "centos"
 webUser: "apache"
 server: "apache2.4"
 php: "mod_php"
+httpdRequire: "Require all granted"
 paths:
   httpd: "/etc/httpd/conf.d/development.conf"
   php: "/etc/php.d/custom.ini"
 db: "mariadb"
+dbCommand: "mysql"
 repos:
   - "epel-release"
 packages:
+  - gcc
+  - make
+  - kernel-devel
   - git
   - chkconfig
   - mariadb
@@ -31,7 +36,6 @@ packages:
   - php-odbc
   - php-xml
   - php-xmlrpc
-  - redis-server
   - vim
   - nfs-utils
   - redis
@@ -41,7 +45,6 @@ services:
   - nfs-idmap
   - httpd
   - mariadb
-  - redis-server
 directories:
   - logs
   - www/public
