@@ -5,10 +5,12 @@ box:
 os: "ubuntu"
 server: "apache2.4"
 php: "mod_php"
+httpdRequire: "Require all granted"
 paths:
   httpd: "/etc/apache2/sites-enabled/development.conf"
   php: "/etc/php5/mods-available/custom.ini"
 db: "mysql"
+dbCommand: "mysql"
 webUser: "www-data"
 repos:
 commands:

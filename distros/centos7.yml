@@ -6,6 +6,7 @@ os: "centos"
 webUser: "apache"
 server: "apache2.4"
 php: "mod_php"
+httpdRequire: "Require all granted"
 paths:
   httpd: "/etc/httpd/conf.d/development.conf"
   php: "/etc/php.d/custom.ini"
