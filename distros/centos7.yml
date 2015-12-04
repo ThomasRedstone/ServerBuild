@@ -1,6 +1,6 @@
 box:
-  virtualbox: chef/centos-7.0
-  vmware: chef/centos-7.0
+  virtualbox: "geerlingguy/centos7"
+  vmware: "geerlingguy/centos7"
   paralells: "parallels/centos-7.0"
 os: "centos"
 webUser: "apache"
@@ -9,9 +9,16 @@ php: "mod_php"
 paths:
   httpd: "/etc/httpd/conf.d/development.conf"
   php: "/etc/php.d/custom.ini"
-db: "mariadb"
+db: "mysql"
 repos:
   - "epel-release"
+commands:
+  service:
+    enable: "systemctl enable {service}.service"
+    restart: "systemctl restart {service}.service"
+  install:
+    remote: "rpm -ivh {package}"
+    package: "yum install -y {package}"
 packages:
   - git
   - chkconfig
@@ -37,11 +44,9 @@ packages:
   - redis
 services:
   - nfs-server
-  - nfs-lock
-  - nfs-idmap
   - httpd
   - mariadb
-  - redis-server
+  - redis
 directories:
   - logs
   - www/public

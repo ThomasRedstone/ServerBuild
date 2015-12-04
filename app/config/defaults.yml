@@ -30,7 +30,7 @@ vagrantfile: |
   ###script###
   SCRIPT
     config.vm.provision "shell", inline: $script
-    config.vm.network "private_network", ip: "192.168.33.###IP###"
+    config.vm.network "private_network", ip: "192.168.###NETWORK###.###IP###"
   end
 php-config: |
     date.timezone = "Europe/London";

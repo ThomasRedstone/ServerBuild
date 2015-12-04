@@ -11,6 +11,13 @@ paths:
 db: "mysql"
 webUser: "www-data"
 repos:
+commands:
+  service:
+    enable: "update-rc.d {service} defaults"
+    restart: "service {service} restart"
+  install:
+    remote: "wget --quiet --output-document=- {package} | dpkg --install -"
+    package: "apt-get install -q -y {package}"
 packages:
   - git
   - curl

@@ -11,18 +11,18 @@ class ServerBuild
 {
     protected $script = '';
     protected $config = [];
+    protected $name;
 
     public function __construct()
     {
     }
 
-    public function build($name, $config, $architecture, $gitUsername, $input, $output)
-
+    public function build($name, $config, $provider, $gitUsername, $input, $output)
     {
         $yaml = new Parser();
+        $this->name = $name;
         $configDefaultsPath = $this->getConfigPath('defaults');
         $configPath = $this->getConfigPath($config);
-        echo "ConfigPath: {$configPath}\n";
         $this->config =
             array_merge(
                 $yaml->parse(file_get_contents($configDefaultsPath)),
@@ -34,13 +34,13 @@ class ServerBuild
         }
         $yaml = new Parser();
         $appConfig = $yaml->parse(file_get_contents($appConfigPath));
-        if (!empty($appConfig['repository']))
-            if (is_dir($name)) {
-                throw new \Exception("A directory with \"{$name}\" already exists");
-            }
-        $box = $this->getBox($this->config['box'], $architecture);
-        #die(getcwd()."\n");
-        mkdir($name);
+        if (empty($appConfig['repository'])) {
+            throw new \Exception("A repository must be provided in the app config.");
+        }
+        if (!is_dir($name)) {
+            throw new \Exception("A directory with \"{$name}\" must exists, with a config.yml file.");
+        }
+        $box = $this->getBox($this->config['box'], $provider);
         chdir($name);
         echo "#Setting up Repository\n";
 	    if(!empty($this->config['prebuildCommands'])) {
@@ -49,33 +49,32 @@ class ServerBuild
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
         $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
         $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages'], true);
-        $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services']);
+        $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services'], 'enable');
         $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
         $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config'], $this->config['paths']['httpd']);
         $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['php-config'], $this->config['paths']['php']);
         $this->script .= "#Setup App\n" . $this->processApplicationConfiguration($appConfig);
         $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
-        #die($this->script);
-        $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['commands']);
-        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $name);
+        $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['script']);
+        $vagrantfile = $this->setupServer($this->script, $this->config['vagrantfile'], $box, $provider, $name);
         file_put_contents("Vagrantfile", $vagrantfile);
-        #$process = new Process('vagrant up');
+        echo "Your Vagrantfile is now finished, to start it run:\n".
+            "    cd {$name};vagrant up --provider {$provider}\n";
+        #$process = new Process("cd {$name};vagrant up --provider {$provider}");
         #$process->run();
         #if (!$process->isSuccessful()) {
         #    throw new \RuntimeException($process->getErrorOutput());
         #}
-
         #echo $process->getOutput();
-        #echo "Vagrantfile:\n{$vagrantfile}\n";
 
     }
 
-    protected function getBox($box, $architecture)
+    protected function getBox($box, $provider)
     {
-        if (!empty($box[$architecture])) {
-            return $box[$architecture];
+        if (!empty($box[$provider])) {
+            return $box[$provider];
         }
-        throw new \Exception("Cannot get a box for the architecture \"{$architecture}\"");
+        throw new \Exception("Cannot get a box for the provider \"{$provider}\"".var_export([$box, $provider], 1));
     }
 
     protected function getConfigPath($config)
@@ -83,6 +82,9 @@ class ServerBuild
         $fileInfo = pathinfo($config);
         if (empty($fileInfo['extension'])) {
             $config .= '.yml';
+        }
+        if($config === 'app.yml' && is_file(APP_PATH."/../{$this->name}/{$config}")) {
+            return APP_PATH."/../{$this->name}/{$config}";
         }
         if (is_file($config)) {
             return $config;
@@ -92,6 +94,9 @@ class ServerBuild
         }
         if (is_file("app/config/{$config}")) {
             return "app/config/{$config}";
+        }
+        if (is_file(APP_PATH . "/distros/{$config}")) {
+            return APP_PATH . "/distros/{$config}";
         }
         if (is_file(APP_PATH . "/app/config/{$config}")) {
             return APP_PATH . "/app/config/{$config}";
@@ -107,15 +112,16 @@ class ServerBuild
         }
         if (is_array($packages)) {
             $script = '';
+            $packageList = '';
             foreach ($packages as $package) {
-                if($compact === true && $script != '') {
-                    $script .= " {$package}";
+                if($compact === true) {
+                    $packageList .= "{$package} ";
                     continue;
                 }
                 $script .= $this->setupPackages($package, $compact);
             }
             if ($compact === true) {
-                $script .= "\n";
+                $script = $this->setupPackages($packageList, $compact)."\n";
             }
         } else {
             $script = $this->installPackage($packages, $compact);
@@ -123,47 +129,19 @@ class ServerBuild
         return $script;
     }
 
-    protected function installPackage($package, $compact = false)
+    protected function installPackage($package)
     {
-        $os = $this->config['os'];
         if (!filter_var($package, FILTER_VALIDATE_URL) === false) {
-            return ($os === "centos" ?
-                "rpm -ivh {$package}" :
-                "wget --quiet --output-document=- {$package} | dpkg --install -") . "\n";
+            return str_replace('{package}', $package, $this->config['commands']['install']['remote'])."\n";
         }
-        $script = ($os === "centos" ?
-            "yum install -y " :
-            "apt-get install -q -y ") .
-        "{$package}";
-        if ($compact === false) {
-            $script .= "\n";
-        }
-        return $script;
+        return str_replace('{package}', $package, $this->config['commands']['install']['package'])."\n";
     }
 
-    protected function setupServices($services, $action = 'enable')
+    protected function setupServices($services, $action)
     {
-        /**
-         * @todo: use switch if we add another OS (CentOS and Ubuntu at the moment).
-         */
         $enableServices = '';
-        $os = $this->config['os'];
         foreach ($services as $service) {
-            switch ($action) {
-                case 'enable':
-                    $enableServices .= (
-                        $os === 'centos' ?
-                            "chkconfig {$service} on" :
-                            "update-rc.d {$service} defaults"
-                        ) . "\n";
-                case 'restart':
-                    $enableServices .= (
-                        $os === 'centos' ?
-                            "service {$service} restart" :
-                            "service {$service} restart"
-                        ) . "\n";
-                    break;
-            }
+            $enableServices .= str_replace('{service}', $service, $this->config['commands']['service'][$action])."\n";
         }
         return $enableServices;
     }
@@ -171,8 +149,12 @@ class ServerBuild
     protected function processApplicationConfiguration($appConfig)
     {
         $script = '';
-        $script .= "#Setup App specific Directories\n" . $this->setupDirectories($appConfig['directories'], true);
-        $script .= "#Run App specific Commands\n" . $this->setupCommands($appConfig['commands']);
+        if(!empty($this->setupDirectories($appConfig['directories']))) {
+            $script .= "#Setup App specific Directories\n" . $this->setupDirectories($appConfig['directories'], true);
+        }
+        if(!empty($this->setupDirectories($appConfig['commands']))) {
+            $script .= "#Run App specific Commands\n" . $this->setupCommands($appConfig['commands']);
+        }
         $script .= "#Run Composer Install\n" . $this->setupComposer();
         if(!empty($appConfig['database'])) {
             $script .= "#Run Database Setup\n" . $this->setupDatabase($appConfig['database']);
@@ -248,12 +230,13 @@ class ServerBuild
         return $script;
     }
 
-    protected function setupServer($script, $vagrantfile, $box, $name)
+    protected function setupServer($script, $vagrantfile, $box, $provider, $name)
     {
         $vagrantfile = str_replace('###script###', $script, $vagrantfile);
         $vagrantfile = str_replace('###name###', $name, $vagrantfile);
         $vagrantfile = str_replace('###box###', $box, $vagrantfile);
         $vagrantfile = str_replace('###IP###', rand(1, 254), $vagrantfile);
+        $vagrantfile = str_replace('###NETWORK###', ($provider === 'parallels' ? '30' : '31'), $vagrantfile);
         return $vagrantfile;
     }
 
@@ -263,8 +246,10 @@ class ServerBuild
         $command = "{$sqlCommand} -u root -e 'create database {$config['user_database']};';\n" .
             "{$sqlCommand} -u root -e 'grant ALL on {$config['user_database']}.* to " .
             "`{$config['user_user']}`@`localhost` identified by \"{$config['user_password']}\"'\n";
-        foreach($config['scripts'] as $script) {
-            $command .= "{$sqlCommand} -u root {$config['user_database']} < /vagrant/{$script}\n";
+        if(!empty($config['scripts']) && is_array($config['scripts'])) {
+            foreach ($config['scripts'] as $script) {
+                $command .= "{$sqlCommand} -u root {$config['user_database']} < /vagrant/{$script}\n";
+            }
         }
         return $command;
     }

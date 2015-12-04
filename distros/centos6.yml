@@ -1,6 +1,6 @@
 box:
-  virtualbox: "chef/centos-6.6"
-  paralells: parallels/centos-6.6
+  virtualbox: "scalefactory/centos6"
+  parallels: "parallels/centos-6.6"
 os: "centos"
 server: "apache2.4"
 php: "mod_php"
@@ -12,6 +12,13 @@ webUser: "apache"
 repos:
   - "epel-release"
   - "http://ftp.riken.jp/Linux/fedora/epel/6/i386/epel-release-6-8.noarch.rpm"
+commands:
+  service:
+    enable: "chkconfig {service} on"
+    restart: "service {service} restart"
+  install:
+    remote: "rpm -ivh {package}"
+    package: "yum install -y {package}"
 packages:
   - git
   - mysql
@@ -28,13 +35,11 @@ packages:
   - php-odbc
   - php-xml
   - php-xmlrpc
-  - redis-server
   - vim
 services:
   - httpd
-  - mysql
+  - mysqld
   - nfs
-  - redis-server
 directories:
   - logs
   - www/public

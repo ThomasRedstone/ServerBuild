@@ -51,10 +51,10 @@ class ServerBuild extends Command
                 'Specify a Git Username, which will be used with the repository provided to clone it'
             )
             ->addOption(
-                'architecture',
+                'provider',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Specify the architecture you\'re using, Virtualbox, VMWare or Paralelles./'
+                'Specify the provider you\'re using, Virtualbox, VMWare or Paralelles./'
             )
         ;
     }
@@ -69,14 +69,14 @@ class ServerBuild extends Command
         if (!$config) {
             $config = 'legacy';
         }
-        $architecture = $input->getOption('architecture');
-        if(!$architecture) {
-            $architecture = 'virtualbox';
+        $provider = $input->getOption('provider');
+        if(!$provider) {
+            $provider = 'virtualbox';
         }
         $gitUsername = $input->getOption('gitUsername');
         if(!$gitUsername) {
             $gitUsername = false;
         }
-        $this->serverBuild->build($name, $config, $architecture, $gitUsername, $input, $output);
+        $this->serverBuild->build($name, $config, $provider, $gitUsername, $input, $output);
     }
 }
