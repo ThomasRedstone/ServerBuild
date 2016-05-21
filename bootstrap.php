@@ -6,7 +6,6 @@
  * Time: 21:20
  */
 
-define('APP_PATH', __DIR__);
 use RedstoneTechnology\ServerBuild\Commands;
 use Symfony\Component\Console\Application;
 

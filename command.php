@@ -2,5 +2,6 @@
 <?php
 // application.php
 
-require 'bootstrap.php';
-require 'vendor/autoload.php';
+define('APP_PATH', __DIR__);
+require APP_PATH.'/bootstrap.php';
+require APP_PATH.'/vendor/autoload.php';
