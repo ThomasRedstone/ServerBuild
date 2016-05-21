@@ -3,3 +3,4 @@
 // application.php
 
 require 'bootstrap.php';
+require 'vendor/autoload.php';

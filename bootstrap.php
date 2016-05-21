@@ -7,8 +7,6 @@
  */
 
 define('APP_PATH', __DIR__);
-require __DIR__.'/vendor/autoload.php';
-
 use RedstoneTechnology\ServerBuild\Commands;
 use Symfony\Component\Console\Application;
 
