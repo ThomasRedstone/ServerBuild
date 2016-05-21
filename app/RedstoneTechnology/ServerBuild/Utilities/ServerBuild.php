@@ -61,7 +61,7 @@ class ServerBuild
         $box = $this->getBox($this->config['box'], $provider);
         chdir($name);
         echo "#Setting up Repository\n";
-	    if (!empty($this->config['prebuildCommands'])) {
+        if (!empty($this->config['prebuildCommands'])) {
             $this->script .= "#Run Prebuild Commands\n" . $this->setupCommands($this->config['prebuildCommands']);
         }
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);

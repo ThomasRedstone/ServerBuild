@@ -14,11 +14,18 @@ use \Symfony\Component\Console\Input\InputInterface;
 use \Symfony\Component\Console\Input\InputOption;
 use \Symfony\Component\Console\Output\OutputInterface;
 
-
+/**
+ * Class ServerBuild
+ * @package RedstoneTechnology\ServerBuild\Commands
+ */
 class ServerBuild extends Command
 {
     protected $serverBuild;
 
+    /**
+     * ServerBuild constructor.
+     * @param \RedstoneTechnology\ServerBuild\Utilities\ServerBuild $serverBuild
+     */
     public function __construct(\RedstoneTechnology\ServerBuild\Utilities\ServerBuild $serverBuild)
     {
         $this->serverBuild = $serverBuild;
@@ -26,6 +33,9 @@ class ServerBuild extends Command
         parent::__construct();
     }
 
+    /**
+     * Configures the ServerBuild command.
+     */
     protected function configure()
     {
         $this
@@ -59,6 +69,11 @@ class ServerBuild extends Command
         ;
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @throws \Exception
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $name = $input->getOption('name');
@@ -70,11 +85,11 @@ class ServerBuild extends Command
             $config = 'legacy';
         }
         $provider = $input->getOption('provider');
-        if(!$provider) {
+        if (!$provider) {
             $provider = 'virtualbox';
         }
         $gitUsername = $input->getOption('gitUsername');
-        if(!$gitUsername) {
+        if (!$gitUsername) {
             $gitUsername = false;
         }
         $this->serverBuild->build($name, $config, $provider, $gitUsername, $input, $output);

@@ -8,10 +8,17 @@
 
 namespace RedstoneTechnology\ServerBuild\Utilities;
 
-
+/**
+ * Class Packages
+ * @package RedstoneTechnology\ServerBuild\Utilities
+ */
 class Packages
 {
-
+    /**
+     * @param $packages
+     * @param bool $compact
+     * @return bool|string
+     */
     public function setupPackages($packages, $compact = false)
     {
         if (empty($packages)) {
@@ -21,7 +28,7 @@ class Packages
             $script = '';
             $packageList = '';
             foreach ($packages as $package) {
-                if($compact === true) {
+                if ($compact === true) {
                     $packageList .= "{$package} ";
                     continue;
                 }
@@ -36,6 +43,10 @@ class Packages
         return $script;
     }
 
+    /**
+     * @param $package
+     * @return string
+     */
     protected function installPackage($package)
     {
         if (!filter_var($package, FILTER_VALIDATE_URL) === false) {
