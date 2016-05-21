@@ -1,5 +1,4 @@
 <?php
-
 namespace RedstoneTechnology\ServerBuild\Utilities;
 
 use Symfony\Component\Yaml\Parser;
@@ -7,16 +6,35 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Helper\QuestionHelper;
 
+/**
+ * Class ServerBuild
+ * @package RedstoneTechnology\ServerBuild\Utilities
+ */
 class ServerBuild
 {
     protected $script = '';
     protected $config = [];
     protected $name;
+    protected $packages;
 
-    public function __construct()
+    /**
+     * ServerBuild constructor.
+     * @param Packages $packages
+     */
+    public function __construct(\RedstoneTechnology\ServerBuild\Utilities\Packages $packages)
     {
+        $this->packages = $packages;
     }
 
+    /**
+     * @param $name
+     * @param $config
+     * @param $provider
+     * @param $gitUsername
+     * @param $input
+     * @param $output
+     * @throws \Exception
+     */
     public function build($name, $config, $provider, $gitUsername, $input, $output)
     {
         $yaml = new Parser();
@@ -43,16 +61,18 @@ class ServerBuild
         $box = $this->getBox($this->config['box'], $provider);
         chdir($name);
         echo "#Setting up Repository\n";
-	    if(!empty($this->config['prebuildCommands'])) {
+	    if (!empty($this->config['prebuildCommands'])) {
             $this->script .= "#Run Prebuild Commands\n" . $this->setupCommands($this->config['prebuildCommands']);
         }
         $this->setupRepository($appConfig['repository'], $gitUsername, $input, $output);
-        $this->script .= "#Setup Repositories:\n" . $this->setupPackages($this->config['repos']);
-        $this->script .= "#Setup Packages:\n" . $this->setupPackages($this->config['packages'], true);
-        $this->script .= "#Enable Services\n" . $this->setupServices($this->config['services'], 'enable');
+        $this->script .= "#Setup Repositories:\n" . $this->packages->setupPackages($this->config['repos']);
+        $this->script .= "#Setup Packages:\n" . $this->packages->setupPackages($this->config['packages'], true);
+        $this->script .= "#Enable Services\n" . $this->packages->setupServices($this->config['services'], 'enable');
         $this->script .= "#Setup Directories:\n" . $this->setupDirectories($this->config['directories']);
-        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['httpd-config'], $this->config['paths']['httpd']);
-        $this->script .= "#Setup Config:\n" . $this->setupConfig($this->config['php-config'], $this->config['paths']['php']);
+        $this->script .= "#Setup Config:\n" .
+            $this->setupConfig($this->config['httpd-config'], $this->config['paths']['httpd']);
+        $this->script .= "#Setup Config:\n" .
+            $this->setupConfig($this->config['php-config'], $this->config['paths']['php']);
         $this->script .= "#Setup App\n" . $this->processApplicationConfiguration($appConfig);
         $this->script .= "#Restart Services\n" . $this->setupServices($this->config['services'], 'restart');
         $this->script .= "#Run Commands\n" . $this->setupCommands($this->config['script']);
@@ -60,15 +80,14 @@ class ServerBuild
         file_put_contents("Vagrantfile", $vagrantfile);
         echo "Your Vagrantfile is now finished, to start it run:\n".
             "    cd {$name};vagrant up --provider {$provider}\n";
-        #$process = new Process("cd {$name};vagrant up --provider {$provider}");
-        #$process->run();
-        #if (!$process->isSuccessful()) {
-        #    throw new \RuntimeException($process->getErrorOutput());
-        #}
-        #echo $process->getOutput();
-
     }
 
+    /**
+     * @param $box
+     * @param $provider
+     * @return mixed
+     * @throws \Exception
+     */
     protected function getBox($box, $provider)
     {
         if (!empty($box[$provider])) {
@@ -77,13 +96,17 @@ class ServerBuild
         throw new \Exception("Cannot get a box for the provider \"{$provider}\"".var_export([$box, $provider], 1));
     }
 
+    /**
+     * @param $config
+     * @return string
+     */
     protected function getConfigPath($config)
     {
         $fileInfo = pathinfo($config);
         if (empty($fileInfo['extension'])) {
             $config .= '.yml';
         }
-        if($config === 'app.yml' && is_file(APP_PATH."/../{$this->name}/{$config}")) {
+        if ($config === 'app.yml' && is_file(APP_PATH."/../{$this->name}/{$config}")) {
             return APP_PATH."/../{$this->name}/{$config}";
         }
         if (is_file($config)) {
@@ -105,38 +128,11 @@ class ServerBuild
         return realpath("./{$config}") . "\n";
     }
 
-    protected function setupPackages($packages, $compact = false)
-    {
-        if (empty($packages)) {
-            return false;
-        }
-        if (is_array($packages)) {
-            $script = '';
-            $packageList = '';
-            foreach ($packages as $package) {
-                if($compact === true) {
-                    $packageList .= "{$package} ";
-                    continue;
-                }
-                $script .= $this->setupPackages($package, $compact);
-            }
-            if ($compact === true) {
-                $script = $this->setupPackages($packageList, $compact)."\n";
-            }
-        } else {
-            $script = $this->installPackage($packages, $compact);
-        }
-        return $script;
-    }
-
-    protected function installPackage($package)
-    {
-        if (!filter_var($package, FILTER_VALIDATE_URL) === false) {
-            return str_replace('{package}', $package, $this->config['commands']['install']['remote'])."\n";
-        }
-        return str_replace('{package}', $package, $this->config['commands']['install']['package'])."\n";
-    }
-
+    /**
+     * @param $services
+     * @param $action
+     * @return string
+     */
     protected function setupServices($services, $action)
     {
         $enableServices = '';
@@ -146,22 +142,31 @@ class ServerBuild
         return $enableServices;
     }
 
+    /**
+     * @param $appConfig
+     * @return string
+     */
     protected function processApplicationConfiguration($appConfig)
     {
         $script = '';
-        if(!empty($this->setupDirectories($appConfig['directories']))) {
+        if (!empty($this->setupDirectories($appConfig['directories']))) {
             $script .= "#Setup App specific Directories\n" . $this->setupDirectories($appConfig['directories'], true);
         }
-        if(!empty($this->setupDirectories($appConfig['commands']))) {
+        if (!empty($this->setupDirectories($appConfig['commands']))) {
             $script .= "#Run App specific Commands\n" . $this->setupCommands($appConfig['commands']);
         }
         $script .= "#Run Composer Install\n" . $this->setupComposer();
-        if(!empty($appConfig['database'])) {
+        if (!empty($appConfig['database'])) {
             $script .= "#Run Database Setup\n" . $this->setupDatabase($appConfig['database']);
         }
         return $script;
     }
 
+    /**
+     * @param $directories
+     * @param bool $global
+     * @return string
+     */
     protected function setupDirectories($directories, $global = false)
     {
         if (is_array($directories)) {
@@ -177,9 +182,15 @@ class ServerBuild
         if (empty($this->config['webUser'])) {
             die("No web user set\n" . var_export($this->config, 1));
         }
-        return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;\nchown {$this->config['webUser']}:vagrant {$directories};\nchmod 775 {$directories}\n";
+        return "if [ ! -d {$directories} ]; then\nmkdir -p {$directories}\nfi;".
+            "\nchown {$this->config['webUser']}:vagrant {$directories};\nchmod 775 {$directories}\n";
     }
 
+    /**
+     * @param $config
+     * @param $path
+     * @return bool|string
+     */
     protected function setupConfig($config, $path)
     {
         if (empty($path) || empty($config)) {
@@ -188,6 +199,12 @@ class ServerBuild
         return "echo \"{$config}\" > {$path}\n";
     }
 
+    /**
+     * @param $repository
+     * @param $gitUsername
+     * @param $input
+     * @param $output
+     */
     protected function setupRepository($repository, $gitUsername, $input, $output)
     {
         if ($gitUsername !== false) {
@@ -209,6 +226,9 @@ class ServerBuild
         }
     }
 
+    /**
+     * @return string
+     */
     protected function setupComposer()
     {
         return "if [ -f /vagrant/www/composer.json ]; then \n".
@@ -219,10 +239,14 @@ class ServerBuild
         "fi\n";
     }
 
+    /**
+     * @param $commands
+     * @return string
+     */
     protected function setupCommands($commands)
     {
         $script = '';
-        if(is_array($commands)) {
+        if (is_array($commands)) {
             foreach ($commands as $command) {
                 $script .= "{$command}\n";
             }
@@ -230,6 +254,14 @@ class ServerBuild
         return $script;
     }
 
+    /**
+     * @param $script
+     * @param $vagrantfile
+     * @param $box
+     * @param $provider
+     * @param $name
+     * @return mixed
+     */
     protected function setupServer($script, $vagrantfile, $box, $provider, $name)
     {
         $vagrantfile = str_replace('###script###', $script, $vagrantfile);
@@ -240,13 +272,17 @@ class ServerBuild
         return $vagrantfile;
     }
 
+    /**
+     * @param $config
+     * @return string
+     */
     protected function setupDatabase($config)
     {
         $sqlCommand = $this->config['db'];
         $command = "{$sqlCommand} -u root -e 'create database {$config['user_database']};';\n" .
             "{$sqlCommand} -u root -e 'grant ALL on {$config['user_database']}.* to " .
             "`{$config['user_user']}`@`localhost` identified by \"{$config['user_password']}\"'\n";
-        if(!empty($config['scripts']) && is_array($config['scripts'])) {
+        if (!empty($config['scripts']) && is_array($config['scripts'])) {
             foreach ($config['scripts'] as $script) {
                 $command .= "{$sqlCommand} -u root {$config['user_database']} < /vagrant/{$script}\n";
             }
@@ -254,4 +290,3 @@ class ServerBuild
         return $command;
     }
 }
-
